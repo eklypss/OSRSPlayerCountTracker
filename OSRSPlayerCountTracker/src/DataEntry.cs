@@ -19,7 +19,7 @@ namespace OSRSPlayerCountTracker.src
         public DataEntry(DateTime date, int playerCount)
         {
             Date = date.ToString("dd/MM/yyyy");
-            Time = date.ToString("hh:mm:ss");
+            Time = date.ToString("HH:mm:ss");
             PlayerCount = playerCount;
         }
     }
