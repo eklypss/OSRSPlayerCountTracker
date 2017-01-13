@@ -18,7 +18,7 @@ namespace OSRSPlayerCountTracker.src
         /// <param name="playerCount"></param>
         public DataEntry(DateTime date, int playerCount)
         {
-            Date = date.ToString("dd-mm-yyyy");
+            Date = date.ToString("dd/MM/yyyy");
             Time = date.ToString("hh:mm:ss");
             PlayerCount = playerCount;
             Console.WriteLine("New data entry was created, date: " + Date + " " + Time + ", player count: " + playerCount);
