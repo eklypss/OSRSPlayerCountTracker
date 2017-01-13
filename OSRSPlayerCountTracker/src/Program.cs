@@ -11,6 +11,8 @@ namespace OSRSPlayerCountTracker
 {
     class Program
     {
+        public static int lastCount = 0;
+
         /// <summary>
         /// Main startup method, starts timer and keeps window open.
         /// </summary>
@@ -64,9 +66,12 @@ namespace OSRSPlayerCountTracker
             foreach(var item in selector)
             {
                 string[] textSplit = item.TextContent.Split(' ');
-                Lists.DataEntryList.Add(new DataEntry(DateTime.Now, Int32.Parse(textSplit[3])));
+                DataEntry dataEntry = new DataEntry(DateTime.Now, Int32.Parse(textSplit[3]));
+                Lists.DataEntryList.Add(dataEntry);
                 DataSerializer ds = new DataSerializer();
                 ds.SerializeData();
+                Console.WriteLine("New data entry was created, date: " + dataEntry.Date + " " + dataEntry.Time + ", player count: " + dataEntry.PlayerCount + ", change: " + (dataEntry.PlayerCount - lastCount));
+                lastCount = dataEntry.PlayerCount;
             }
         }
     }

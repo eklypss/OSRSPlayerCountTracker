@@ -21,7 +21,6 @@ namespace OSRSPlayerCountTracker.src
             Date = date.ToString("dd/MM/yyyy");
             Time = date.ToString("hh:mm:ss");
             PlayerCount = playerCount;
-            Console.WriteLine("New data entry was created, date: " + Date + " " + Time + ", player count: " + playerCount);
         }
     }
 }

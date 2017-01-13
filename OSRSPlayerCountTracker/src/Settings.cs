@@ -13,7 +13,7 @@ namespace OSRSPlayerCountTracker.src
         /// <summary>
         /// Update interval in milliseconds.
         /// </summary>
-        public static int UpdateInterval = 60000;
+        public static int UpdateInterval = 1800000;
 
         /// <summary>
         /// Paths to data folder and data file.
