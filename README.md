@@ -4,7 +4,7 @@ A small tool that keeps track of the player count of Old School RuneScape.
 
 ###Settings
 
-Update interval can be changes in **Settings.cs** file. This determines how often the tool checks the player count.
+Update interval can be changed in **Settings.cs** file. This determines how often the tool checks the player count.
 
 ### TODO:
 - Handle collected data, perhaps visualize and present it on a webpage with graphs or generate graph images
