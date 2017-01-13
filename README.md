@@ -1,9 +1,7 @@
 ##OSRSPlayerCountTracker
-
 A small tool that keeps track of the player count of Old School RuneScape.
 
 ###Settings
-
 Update interval can be changed in **Settings.cs** file. This determines how often the tool checks the player count.
 
 ### Planned updates / changes
@@ -11,7 +9,6 @@ Update interval can be changed in **Settings.cs** file. This determines how ofte
 - Add more settings, e.g. only keep track of the highest or lowest player count(s)
 
 ###Example output
-
 <pre>
 [
   {
