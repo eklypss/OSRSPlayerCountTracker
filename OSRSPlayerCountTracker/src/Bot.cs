@@ -1,16 +1,17 @@
 ﻿using System;
-using System.Configuration;
+using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 using System.Timers;
 using System.Windows.Forms.DataVisualization.Charting;
 using AngleSharp.Parser.Html;
 using Tweetinvi;
+using Tweetinvi.Models;
+using Tweetinvi.Parameters;
 using Console = Colorful.Console;
 
 namespace OSRSPlayerCountTracker.src
@@ -28,7 +29,13 @@ namespace OSRSPlayerCountTracker.src
         /// <param name="args"></param>
         public static async void Start()
         {
-            FileCheck();
+            FileChecker.FileCheck();
+            try
+            {
+                Auth.SetUserCredentials(Settings.ConsumerKey, Settings.ConsumerSecret, Settings.UserAccessToken, Settings.UserAccessSecret);
+            }
+            catch (Exception ex) { Console.WriteLine(ex.Message); }
+
             lastCheck = DateTime.Now;
             mainTimer = new Timer { AutoReset = true, Interval = Settings.UpdateInterval, Enabled = false };
             checkTimer = new Timer { AutoReset = true, Interval = 1000, Enabled = true };
@@ -38,7 +45,7 @@ namespace OSRSPlayerCountTracker.src
 
             if (Console.ReadKey().Key == ConsoleKey.F1)
             {
-                var chart = await CreateChart();
+                var chart = await ChartGenerator.CreateChart();
                 string chartImageFileName = string.Format("player-count-chart {0}.png", DateTime.Now.ToString("dd-MM-yyyy hh-mm-ss"));
                 chart.SaveImage(Path.Combine(Settings.DataFolder, chartImageFileName), ChartImageFormat.Png);
             }
@@ -47,8 +54,7 @@ namespace OSRSPlayerCountTracker.src
 
         private static void CheckTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
-            //if (DateTime.Now.Hour == 0 && DateTime.Now.Minute == 0)
-            if (Console.ReadKey().Key == ConsoleKey.S)
+            if (DateTime.Now.Hour == 0 && DateTime.Now.Minute == 0)
             {
                 Console.WriteLine("Starting main timer.", Color.Green);
                 lastCheck = DateTime.Now;
@@ -57,41 +63,10 @@ namespace OSRSPlayerCountTracker.src
                 checkTimer.Stop();
                 checkTimer.Dispose();
             }
-        }
-
-        /// <summary>
-        /// Checks that DataFolder exists and creates DataFile.
-        /// </summary>
-        private static void FileCheck()
-        {
-            if (!Directory.Exists(Settings.DataFolder)) Directory.CreateDirectory(Settings.DataFolder);
-            string dataFileName = string.Format("data {0}.json", DateTime.Now.ToString("dd-MM-yyyy hh-mm-ss"));
-            Settings.DataFile = Path.Combine(Settings.DataFolder, dataFileName);
-            //if (!File.Exists(Settings.DataFile)) File.Create(Settings.DataFile).Close();
-            if (!File.Exists(Settings.SettingsFile))
-            {
-                File.Create(Settings.SettingsFile).Close();
-                Configuration config = ConfigurationManager.OpenExeConfiguration(Settings.SettingsFile);
-                config.AppSettings.Settings.Add("UserAccessSecret", "not_set");
-                config.AppSettings.Settings.Add("UserAccessToken", "not_set");
-                config.AppSettings.Settings.Add("ConsumerSecret", "not_set");
-                config.AppSettings.Settings.Add("ConsumerKey", "not_set");
-                config.AppSettings.Settings.Add("ImgurClientID", "not_set");
-                config.AppSettings.Settings.Add("ImgurSecret", "not_set");
-                config.Save(ConfigurationSaveMode.Minimal);
-                Console.WriteLine("Settings file was created, change your settings and restart the program.", Color.Red);
-            }
             else
             {
-                Configuration config = ConfigurationManager.OpenExeConfiguration(Settings.SettingsFile);
-                Settings.UserAccessSecret = config.AppSettings.Settings["UserAccessSecret"].Value;
-                Settings.UserAccessToken = config.AppSettings.Settings["UserAccessToken"].Value;
-                Settings.ConsumerSecret = config.AppSettings.Settings["ConsumerSecret"].Value;
-                Settings.ConsumerKey = config.AppSettings.Settings["ConsumerKey"].Value;
-                Settings.ImgurClientID = config.AppSettings.Settings["ImgurClientID"].Value;
-                Settings.ImgurSecret = config.AppSettings.Settings["ImgurSecret"].Value;
-                Auth.SetUserCredentials(Settings.ConsumerKey, Settings.ConsumerSecret, Settings.UserAccessSecret, Settings.UserAccessSecret);
-                Console.WriteLine("Settings successfully loaded.", Color.LightSeaGreen);
+                TimeSpan untilMidnight = DateTime.Today.AddDays(1.0) - DateTime.Now;
+                Console.WriteLine(string.Format("Starting in {0} hours, {1} minutes and {2} seconds.", untilMidnight.Hours, untilMidnight.Minutes, untilMidnight.Seconds), Color.Aquamarine);
             }
         }
 
@@ -128,68 +103,31 @@ namespace OSRSPlayerCountTracker.src
                     string[] textSplit = item.TextContent.Split(' ');
                     DataEntry dataEntry = new DataEntry(DateTime.Now, Int32.Parse(textSplit[3]));
                     Lists.DataEntryList.Add(dataEntry);
-                    //DataSerializer ds = new DataSerializer();
-                    //ds.SerializeData();
-                    Console.WriteLine("> New data entry was created, date: " + dataEntry.Date + " " + dataEntry.Time + ", player count: " + dataEntry.PlayerCount + ", change: " + (dataEntry.PlayerCount - lastCount), Color.LightSeaGreen);
+                    Console.WriteLine(string.Format("> New data entry was created, date: {0} {1}, player count: {2}, change: {3}", dataEntry.Date, dataEntry.Time, dataEntry.PlayerCount, (dataEntry.PlayerCount - lastCount)), Color.LightSeaGreen);
                     lastCount = dataEntry.PlayerCount;
                 }
 
-                DateTime endTime = lastCheck.AddHours(24);
+                DateTime endTime = lastCheck.AddHours(12);
                 TimeSpan timeSpan = endTime.Subtract(DateTime.Now);
                 Console.WriteLine(timeSpan.TotalHours);
                 if (timeSpan.TotalHours <= 0)
                 {
                     lastCheck = DateTime.Now;
                     Console.WriteLine("> Day changed, creating chart, uploading and resetting..", Color.Orange);
-                    var chart = await CreateChart();
+                    var chart = await ChartGenerator.CreateChart();
                     string chartImageFileName = string.Format("player-count-chart {0}.png", DateTime.Now.ToString("dd-MM-yyyy hh-mm-ss"));
                     chart.SaveImage(Path.Combine(Settings.DataFolder, chartImageFileName), ChartImageFormat.Png);
+                    byte[] chartImageFile = File.ReadAllBytes(chartImageFileName);
+                    var tweetMedia = Upload.UploadImage(chartImageFile);
+
+                    var tweet = Tweet.PublishTweet("#OSRS #RuneScape Player counts for " + DateTime.Now.AddDays(-1).ToLongDateString(), new PublishTweetOptionalParameters
+                    {
+                        Medias = new List<IMedia> { tweetMedia }
+                    });
                 }
-                else Console.WriteLine("Done at: " + lastCheck.AddHours(24).ToLongDateString() + " " + lastCheck.AddHours(24).ToLongTimeString() + " (in " + timeSpan.TotalHours + " hours)");
+                else Console.WriteLine(string.Format("Done at: {0} {1} (in {2} hours)", endTime.ToLongDateString(), endTime.ToLongTimeString(), Math.Round(timeSpan.TotalHours, 2)), Color.LightSeaGreen);
             }
             catch (Exception ex) { Console.WriteLine(ex.Message); }
-        }
-
-        private static async Task<Chart> CreateChart()
-        {
-            DataSet dataSet = new DataSet();
-            DataTable dataTable = new DataTable();
-            dataTable.Columns.Add("Hour", typeof(string));
-            dataTable.Columns.Add("Player count", typeof(string));
-            foreach (var dataEntry in Lists.DataEntryList)
-            {
-                DataRow dataRow = dataTable.NewRow();
-                dataRow[0] = dataEntry.Time;
-                dataRow[1] = dataEntry.PlayerCount;
-                dataTable.Rows.Add(dataRow);
-            }
-            dataSet.Tables.Add(dataTable);
-
-            Chart chart = new Chart() { DataSource = dataSet.Tables[0], Size = new Size(1920, 1080), AntiAliasing = AntiAliasingStyles.All, TextAntiAliasingQuality = TextAntiAliasingQuality.High };
-            Title chartTitle = new Title() { Font = new Font("Roboto", 42), ForeColor = Color.Black, Text = "OSRS Player Counts - " + DateTime.Now.ToLongDateString() };
-            chart.Titles.Add(chartTitle);
-            Series series = new Series()
-            {
-                Name = "Series1",
-                Color = Color.DeepSkyBlue,
-                BorderColor = Color.Black,
-                ChartType = SeriesChartType.Column,
-                BorderDashStyle = ChartDashStyle.Solid,
-                BorderWidth = 0,
-                IsValueShownAsLabel = true,
-                Font = new Font("Roboto", 13),
-                LabelForeColor = Color.Black,
-                XValueMember = "Hour",
-                YValueMembers = "Player count",
-                BackSecondaryColor = Color.Azure
-            };
-            chart.Series.Add(series);
-            ChartArea chartArea = new ChartArea() { Name = "ChartArea1", BorderDashStyle = ChartDashStyle.Solid, AxisY = new Axis() { Minimum = 20000 }, AxisX = new Axis() { Interval = 1 } };
-
-            chart.ChartAreas.Add(chartArea);
-            chart.DataBind();
-            Lists.DataEntryList.Clear();
-            return chart;
         }
     }
 }

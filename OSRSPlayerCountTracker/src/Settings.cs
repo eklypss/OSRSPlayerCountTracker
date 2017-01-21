@@ -13,7 +13,6 @@ namespace OSRSPlayerCountTracker.src
         /// <summary>
         /// Update interval in milliseconds.
         /// </summary>
-        //public static int UpdateInterval = 3600000;
         public static int UpdateInterval = 3600000;
 
         /// <summary>
@@ -28,16 +27,8 @@ namespace OSRSPlayerCountTracker.src
         /// Twitter user details
         /// </summary>
         public static string UserAccessSecret = string.Empty;
-
         public static string UserAccessToken = string.Empty;
         public static string ConsumerSecret = string.Empty;
         public static string ConsumerKey = string.Empty;
-
-        /// <summary>
-        /// Imgur user details
-        /// </summary>
-        public static string ImgurClientID = string.Empty;
-
-        public static string ImgurSecret = string.Empty;
     }
 }
